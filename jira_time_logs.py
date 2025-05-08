@@ -3,6 +3,8 @@ import pandas as pd
 from datetime import datetime, date
 import calendar
 import sys
+import re
+import argparse
 
 try:
     from config import JIRA_URL, JIRA_EMAIL, JIRA_API_TOKEN, OUTPUT_FILENAME_PREFIX
@@ -10,25 +12,64 @@ except ImportError:
     print("Error: config.py file not found. Please create config.py with JIRA_URL, JIRA_EMAIL, and JIRA_API_TOKEN.")
     sys.exit(1)
 
-def get_current_month_range():
-    """Get the start and end dates for the current month."""
-    today = date.today()
-    first_day = date(today.year, today.month, 1)
-    last_day = date(today.year, today.month, calendar.monthrange(today.year, today.month)[1])
+def validate_date_format(date_str):
+    """Validate the date string format (YYYY-MM) and return a tuple of (year, month)."""
+    if date_str is None:
+        return None
+        
+    if not isinstance(date_str, str):
+        raise ValueError("Date must be a string in format YYYY-MM (e.g., 2024-03)")
+    
+    if not date_str:
+        raise ValueError("Date string cannot be empty")
+        
+    # Basic format check
+    if not re.match(r'^\d{4}-\d{2}$', date_str):
+        raise ValueError("Date must be in format YYYY-MM (e.g., 2024-03)")
+    
+    try:
+        year, month = map(int, date_str.split('-'))
+    except (ValueError, TypeError):
+        raise ValueError("Date must be in format YYYY-MM (e.g., 2024-03)")
+    
+    # Check if year is reasonable (between 2000 and current year + 1)
+    current_year = datetime.now().year
+    if year < 2000 or year > current_year + 1:
+        raise ValueError(f"Year must be between 2000 and {current_year + 1}")
+    
+    # Validate month range (1-12)
+    if month < 1 or month > 12:
+        raise ValueError("Month must be between 01 and 12")
+    
+    return year, month
+
+def get_month_range(year=None, month=None):
+    """Get the start and end dates for the specified month or current month."""
+    if year is None or month is None:
+        today = date.today()
+        year = today.year
+        month = today.month
+    
+    first_day = date(year, month, 1)
+    last_day = date(year, month, calendar.monthrange(year, month)[1])
     return first_day, last_day
 
-def fetch_time_logs():
-    """Fetch time logs from Jira for the current month."""
+def fetch_time_logs(target_date=None):
+    """Fetch time logs from Jira for the specified month or current month."""
     # Connect to Jira
     jira = JIRA(
         server=JIRA_URL,
         basic_auth=(JIRA_EMAIL, JIRA_API_TOKEN)
     )
 
-    # Get current month's date range
-    start_date, end_date = get_current_month_range()
+    # Get date range
+    if target_date:
+        year, month = validate_date_format(target_date)
+        start_date, end_date = get_month_range(year, month)
+    else:
+        start_date, end_date = get_month_range()
     
-    # Prepare the JQL query for worklogs in the current month
+    # Prepare the JQL query for worklogs in the target month
     jql_query = f'worklogDate >= "{start_date}" AND worklogDate <= "{end_date}"'
     
     # Initialize lists to store data
@@ -45,7 +86,7 @@ def fetch_time_logs():
             # Convert worklog date to datetime
             worklog_date = datetime.strptime(worklog.started, "%Y-%m-%dT%H:%M:%S.%f%z").date()
             
-            # Only include worklogs from current month
+            # Only include worklogs from target month
             if start_date <= worklog_date <= end_date:
                 time_logs.append({
                     'Assignee': worklog.author.displayName,
@@ -75,18 +116,22 @@ def aggregate_time_logs(time_logs):
     
     return aggregated_df.to_dict('records')
 
-def save_to_csv(time_logs):
+def save_to_csv(time_logs, target_date=None):
     """Save time logs to a CSV file."""
     if not time_logs:
-        print("No time logs found for the current month.")
+        print("No time logs found for the specified month.")
         return
     
     # Create DataFrame
     df = pd.DataFrame(time_logs)
     
-    # Generate filename with current month and year
-    current_date = datetime.now()
-    filename = f"{OUTPUT_FILENAME_PREFIX}_{current_date.strftime('%Y_%m')}.csv"
+    # Generate filename with target month and year or current date
+    if target_date:
+        year, month = validate_date_format(target_date)
+        filename = f"{OUTPUT_FILENAME_PREFIX}_{year}_{month:02d}.csv"
+    else:
+        current_date = datetime.now()
+        filename = f"{OUTPUT_FILENAME_PREFIX}_{current_date.strftime('%Y_%m')}.csv"
     
     # Save to CSV
     df.to_csv(filename, index=False)
@@ -94,13 +139,26 @@ def save_to_csv(time_logs):
 
 def main():
     try:
-        print("Fetching time logs from Jira...")
-        time_logs = fetch_time_logs()
+        # Set up argument parser
+        parser = argparse.ArgumentParser(description='Fetch Jira time logs for a specific month')
+        parser.add_argument('--date', type=str, help='Target month in YYYY-MM format (e.g., 2024-03)')
+        args = parser.parse_args()
+
+        # Validate date if provided
+        if args.date:
+            validate_date_format(args.date)
+        
+        print(f"Fetching time logs from Jira for {'specified month' if args.date else 'current month'}...")
+        time_logs = fetch_time_logs(args.date)
         print("Aggregating time logs...")
         aggregated_logs = aggregate_time_logs(time_logs)
-        save_to_csv(aggregated_logs)
+        save_to_csv(aggregated_logs, args.date)
+    except ValueError as e:
+        print(f"Error: {str(e)}")
+        sys.exit(1)
     except Exception as e:
         print(f"An error occurred: {str(e)}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main() 
