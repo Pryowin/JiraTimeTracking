@@ -9,4 +9,7 @@ JIRA_EMAIL = "your-email@example.com"
 
 # Your Jira API token
 # You can generate an API token from: https://id.atlassian.com/manage-profile/security/api-tokens
-JIRA_API_TOKEN = "your-api-token-here" 
+JIRA_API_TOKEN = "your-api-token-here"
+
+# Output file configuration
+OUTPUT_FILENAME_PREFIX = "jira_time_logs" 

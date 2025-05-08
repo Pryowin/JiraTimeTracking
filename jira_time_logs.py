@@ -5,7 +5,7 @@ import calendar
 import sys
 
 try:
-    from config import JIRA_URL, JIRA_EMAIL, JIRA_API_TOKEN
+    from config import JIRA_URL, JIRA_EMAIL, JIRA_API_TOKEN, OUTPUT_FILENAME_PREFIX
 except ImportError:
     print("Error: config.py file not found. Please create config.py with JIRA_URL, JIRA_EMAIL, and JIRA_API_TOKEN.")
     sys.exit(1)
@@ -56,6 +56,25 @@ def fetch_time_logs():
     
     return time_logs
 
+def aggregate_time_logs(time_logs):
+    """Aggregate time logs by assignee and ticket."""
+    if not time_logs:
+        return []
+    
+    # Create DataFrame
+    df = pd.DataFrame(time_logs)
+    
+    # Group by assignee, ticket number, and ticket description, then sum the hours
+    aggregated_df = df.groupby(['Assignee', 'Ticket Number', 'Ticket Description'])['Hours Logged'].sum().reset_index()
+    
+    # Sort by assignee and ticket number
+    aggregated_df = aggregated_df.sort_values(['Assignee', 'Ticket Number'])
+    
+    # Round hours to 2 decimal places
+    aggregated_df['Hours Logged'] = aggregated_df['Hours Logged'].round(2)
+    
+    return aggregated_df.to_dict('records')
+
 def save_to_csv(time_logs):
     """Save time logs to a CSV file."""
     if not time_logs:
@@ -67,7 +86,7 @@ def save_to_csv(time_logs):
     
     # Generate filename with current month and year
     current_date = datetime.now()
-    filename = f"jira_time_logs_{current_date.strftime('%Y_%m')}.csv"
+    filename = f"{OUTPUT_FILENAME_PREFIX}_{current_date.strftime('%Y_%m')}.csv"
     
     # Save to CSV
     df.to_csv(filename, index=False)
@@ -77,7 +96,9 @@ def main():
     try:
         print("Fetching time logs from Jira...")
         time_logs = fetch_time_logs()
-        save_to_csv(time_logs)
+        print("Aggregating time logs...")
+        aggregated_logs = aggregate_time_logs(time_logs)
+        save_to_csv(aggregated_logs)
     except Exception as e:
         print(f"An error occurred: {str(e)}")
 
