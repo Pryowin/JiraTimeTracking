@@ -1,12 +1,12 @@
 # Jira Time Logs Reporter
 
-This Python script fetches time log entries from a Jira instance for a specified month (or current month if not specified) and saves them to a CSV file. The script aggregates time entries by assignee and ticket, making it easy to track time spent on different tasks.
+This Python script fetches time log entries from a Jira instance for a specified month (or current month if not specified) and saves them to either a CSV or Excel file. The script aggregates time entries by assignee and ticket, making it easy to track time spent on different tasks.
 
 ## Features
 
 - Fetches time logs from Jira for a specific month or current month
 - Aggregates time entries by assignee and ticket
-- Saves data to a CSV file with a clear naming convention
+- Saves data to either CSV or Excel file with a clear naming convention
 - Handles date validation and error cases
 - Includes comprehensive test suite
 
@@ -69,6 +69,22 @@ python jira_time_logs.py --date 2024-03
 ```
 
 This will create a CSV file named `jira_time_logs_2024_03.csv`.
+
+### Output Format
+
+By default, the script saves data in CSV format. To save in Excel format, use the `--format` option:
+
+```bash
+python jira_time_logs.py --format excel
+```
+
+You can combine this with the date option:
+
+```bash
+python jira_time_logs.py --date 2024-03 --format excel
+```
+
+This will create an Excel file named `jira_time_logs_2024_03.xlsx`.
 
 ### Date Format Requirements
 

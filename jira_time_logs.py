@@ -116,8 +116,8 @@ def aggregate_time_logs(time_logs):
     
     return aggregated_df.to_dict('records')
 
-def save_to_csv(time_logs, target_date=None):
-    """Save time logs to a CSV file."""
+def save_time_logs(time_logs, target_date=None, output_format='csv'):
+    """Save time logs to a file in the specified format (csv or excel)."""
     if not time_logs:
         print("No time logs found for the specified month.")
         return
@@ -128,13 +128,19 @@ def save_to_csv(time_logs, target_date=None):
     # Generate filename with target month and year or current date
     if target_date:
         year, month = validate_date_format(target_date)
-        filename = f"{OUTPUT_FILENAME_PREFIX}_{year}_{month:02d}.csv"
+        base_filename = f"{OUTPUT_FILENAME_PREFIX}_{year}_{month:02d}"
     else:
         current_date = datetime.now()
-        filename = f"{OUTPUT_FILENAME_PREFIX}_{current_date.strftime('%Y_%m')}.csv"
+        base_filename = f"{OUTPUT_FILENAME_PREFIX}_{current_date.strftime('%Y_%m')}"
     
-    # Save to CSV
-    df.to_csv(filename, index=False)
+    # Save to file based on format
+    if output_format.lower() == 'excel':
+        filename = f"{base_filename}.xlsx"
+        df.to_excel(filename, index=False, engine='openpyxl')
+    else:  # default to csv
+        filename = f"{base_filename}.csv"
+        df.to_csv(filename, index=False)
+    
     print(f"Time logs have been saved to {filename}")
 
 def main():
@@ -142,6 +148,8 @@ def main():
         # Set up argument parser
         parser = argparse.ArgumentParser(description='Fetch Jira time logs for a specific month')
         parser.add_argument('--date', type=str, help='Target month in YYYY-MM format (e.g., 2024-03)')
+        parser.add_argument('--format', type=str, choices=['csv', 'excel'], default='csv',
+                          help='Output format (csv or excel)')
         args = parser.parse_args()
 
         # Validate date if provided
@@ -152,7 +160,7 @@ def main():
         time_logs = fetch_time_logs(args.date)
         print("Aggregating time logs...")
         aggregated_logs = aggregate_time_logs(time_logs)
-        save_to_csv(aggregated_logs, args.date)
+        save_time_logs(aggregated_logs, args.date, args.format)
     except ValueError as e:
         print(f"Error: {str(e)}")
         sys.exit(1)

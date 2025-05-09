@@ -5,7 +5,7 @@ from unittest.mock import Mock, patch
 from jira_time_logs import (
     get_month_range,
     aggregate_time_logs,
-    save_to_csv,
+    save_time_logs,
     validate_date_format
 )
 
@@ -132,27 +132,49 @@ def test_aggregate_time_logs_sorting():
     assert assignees == sorted(assignees)
 
 @patch('pandas.DataFrame.to_csv')
-def test_save_to_csv_current_month(mock_to_csv):
-    """Test saving to CSV for current month."""
-    save_to_csv(MOCK_TIME_LOGS)
+@patch('pandas.DataFrame.to_excel')
+def test_save_time_logs_csv(mock_to_excel, mock_to_csv):
+    """Test saving to CSV format."""
+    save_time_logs(MOCK_TIME_LOGS, output_format='csv')
     mock_to_csv.assert_called_once()
+    mock_to_excel.assert_not_called()
+
+@patch('pandas.DataFrame.to_csv')
+@patch('pandas.DataFrame.to_excel')
+def test_save_time_logs_excel(mock_to_excel, mock_to_csv):
+    """Test saving to Excel format."""
+    save_time_logs(MOCK_TIME_LOGS, output_format='excel')
+    mock_to_excel.assert_called_once()
+    mock_to_csv.assert_not_called()
+
+@patch('pandas.DataFrame.to_csv')
+@patch('pandas.DataFrame.to_excel')
+def test_save_time_logs_current_month(mock_to_excel, mock_to_csv):
+    """Test saving to CSV for current month."""
+    save_time_logs(MOCK_TIME_LOGS)
+    mock_to_csv.assert_called_once()
+    mock_to_excel.assert_not_called()
     
     current_date = datetime.now()
     expected_filename = f"jira_time_logs_{current_date.strftime('%Y_%m')}.csv"
     assert expected_filename in str(mock_to_csv.call_args)
 
 @patch('pandas.DataFrame.to_csv')
-def test_save_to_csv_specific_month(mock_to_csv):
+@patch('pandas.DataFrame.to_excel')
+def test_save_time_logs_specific_month(mock_to_excel, mock_to_csv):
     """Test saving to CSV for specific month."""
-    save_to_csv(MOCK_TIME_LOGS, "2024-03")
+    save_time_logs(MOCK_TIME_LOGS, "2024-03")
     mock_to_csv.assert_called_once()
+    mock_to_excel.assert_not_called()
     assert "jira_time_logs_2024_03.csv" in str(mock_to_csv.call_args)
 
 @patch('pandas.DataFrame.to_csv')
-def test_save_to_csv_empty(mock_to_csv):
-    """Test that save_to_csv handles empty data correctly."""
-    save_to_csv([])
+@patch('pandas.DataFrame.to_excel')
+def test_save_time_logs_empty(mock_to_excel, mock_to_csv):
+    """Test that save_time_logs handles empty data correctly."""
+    save_time_logs([])
     mock_to_csv.assert_not_called()
+    mock_to_excel.assert_not_called()
 
 @pytest.fixture
 def mock_jira():
