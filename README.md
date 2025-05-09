@@ -7,6 +7,9 @@ This Python script fetches time log entries from a Jira instance for a specified
 - Fetches time logs from Jira for a specific month or current month
 - Aggregates time entries by assignee and ticket
 - Saves data to either CSV or Excel file with a clear naming convention
+- When using Excel format, includes additional sheets with pivot tables:
+  - Hours by Person: Total hours logged by each person
+  - Hours by Ticket: Total hours logged for each ticket
 - Handles date validation and error cases
 - Includes comprehensive test suite
 
@@ -84,7 +87,10 @@ You can combine this with the date option:
 python jira_time_logs.py --date 2024-03 --format excel
 ```
 
-This will create an Excel file named `jira_time_logs_2024_03.xlsx`.
+This will create an Excel file named `jira_time_logs_2024_03.xlsx` with three sheets:
+1. Time Logs: Detailed time log entries
+2. Hours by Person: Pivot table showing total hours logged by each person
+3. Hours by Ticket: Pivot table showing total hours logged for each ticket
 
 ### Date Format Requirements
 
@@ -95,11 +101,15 @@ This will create an Excel file named `jira_time_logs_2024_03.xlsx`.
 
 ## Output
 
-The script generates a CSV file containing the following columns:
+The script generates a file containing the following columns:
 - Assignee: Name of the person who logged the time
 - Ticket Number: Jira ticket identifier
 - Ticket Description: Summary of the ticket
 - Hours Logged: Total hours spent on the ticket (aggregated)
+
+When using Excel format, additional pivot table sheets are included:
+- Hours by Person: Total hours logged by each person, sorted alphabetically
+- Hours by Ticket: Total hours logged for each ticket, sorted by description
 
 ## Running Tests
 
@@ -126,7 +136,7 @@ The test suite includes:
 - Date format validation
 - Month range calculation
 - Time log aggregation
-- CSV file generation
+- CSV and Excel file generation
 - Jira API interaction (mocked)
 
 ## Error Handling
@@ -148,4 +158,4 @@ The script handles various error cases:
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details. 
+This project is licensed under the MIT License - see the LICENSE file for details.

@@ -132,49 +132,58 @@ def test_aggregate_time_logs_sorting():
     assert assignees == sorted(assignees)
 
 @patch('pandas.DataFrame.to_csv')
-@patch('pandas.DataFrame.to_excel')
-def test_save_time_logs_csv(mock_to_excel, mock_to_csv):
-    """Test saving to CSV format."""
-    save_time_logs(MOCK_TIME_LOGS, output_format='csv')
-    mock_to_csv.assert_called_once()
-    mock_to_excel.assert_not_called()
-
-@patch('pandas.DataFrame.to_csv')
-@patch('pandas.DataFrame.to_excel')
-def test_save_time_logs_excel(mock_to_excel, mock_to_csv):
-    """Test saving to Excel format."""
+@patch('pandas.ExcelWriter')
+def test_save_time_logs_excel(mock_excel_writer, mock_to_csv):
+    """Test saving to Excel format with multiple sheets."""
+    # Setup mock ExcelWriter
+    mock_writer = Mock()
+    mock_excel_writer.return_value.__enter__.return_value = mock_writer
+    
     save_time_logs(MOCK_TIME_LOGS, output_format='excel')
-    mock_to_excel.assert_called_once()
+    
+    # Verify ExcelWriter was created
+    mock_excel_writer.assert_called_once()
+    
+    # Verify all three sheets were written
+    assert mock_writer.to_excel.call_count == 3
+    
+    # Get all sheet names that were written
+    sheet_calls = [call[1]['sheet_name'] for call in mock_writer.to_excel.call_args_list]
+    assert 'Time Logs' in sheet_calls
+    assert 'Hours by Person' in sheet_calls
+    assert 'Hours by Ticket' in sheet_calls
+    
+    # Verify CSV was not called
     mock_to_csv.assert_not_called()
 
 @patch('pandas.DataFrame.to_csv')
-@patch('pandas.DataFrame.to_excel')
-def test_save_time_logs_current_month(mock_to_excel, mock_to_csv):
+@patch('pandas.ExcelWriter')
+def test_save_time_logs_current_month(mock_excel_writer, mock_to_csv):
     """Test saving to CSV for current month."""
     save_time_logs(MOCK_TIME_LOGS)
     mock_to_csv.assert_called_once()
-    mock_to_excel.assert_not_called()
+    mock_excel_writer.assert_not_called()
     
     current_date = datetime.now()
     expected_filename = f"jira_time_logs_{current_date.strftime('%Y_%m')}.csv"
     assert expected_filename in str(mock_to_csv.call_args)
 
 @patch('pandas.DataFrame.to_csv')
-@patch('pandas.DataFrame.to_excel')
-def test_save_time_logs_specific_month(mock_to_excel, mock_to_csv):
+@patch('pandas.ExcelWriter')
+def test_save_time_logs_specific_month(mock_excel_writer, mock_to_csv):
     """Test saving to CSV for specific month."""
     save_time_logs(MOCK_TIME_LOGS, "2024-03")
     mock_to_csv.assert_called_once()
-    mock_to_excel.assert_not_called()
+    mock_excel_writer.assert_not_called()
     assert "jira_time_logs_2024_03.csv" in str(mock_to_csv.call_args)
 
 @patch('pandas.DataFrame.to_csv')
-@patch('pandas.DataFrame.to_excel')
-def test_save_time_logs_empty(mock_to_excel, mock_to_csv):
+@patch('pandas.ExcelWriter')
+def test_save_time_logs_empty(mock_excel_writer, mock_to_csv):
     """Test that save_time_logs handles empty data correctly."""
     save_time_logs([])
     mock_to_csv.assert_not_called()
-    mock_to_excel.assert_not_called()
+    mock_excel_writer.assert_not_called()
 
 @pytest.fixture
 def mock_jira():

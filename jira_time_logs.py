@@ -136,7 +136,30 @@ def save_time_logs(time_logs, target_date=None, output_format='csv'):
     # Save to file based on format
     if output_format.lower() == 'excel':
         filename = f"{base_filename}.xlsx"
-        df.to_excel(filename, index=False, engine='openpyxl')
+        
+        # Create Excel writer
+        with pd.ExcelWriter(filename, engine='openpyxl') as writer:
+            # Save main data to first sheet
+            df.to_excel(writer, sheet_name='Time Logs', index=False)
+            
+            # Create pivot table for hours by person
+            pivot_by_person = df.pivot_table(
+                values='Hours Logged',
+                index='Assignee',
+                aggfunc='sum'
+            ).round(2)
+            pivot_by_person = pivot_by_person.sort_index()  # Sort by name
+            pivot_by_person.to_excel(writer, sheet_name='Hours by Person')
+            
+            # Create pivot table for hours by ticket
+            pivot_by_ticket = df.pivot_table(
+                values='Hours Logged',
+                index=['Ticket Number', 'Ticket Description'],
+                aggfunc='sum'
+            ).round(2)
+            pivot_by_ticket = pivot_by_ticket.sort_values('Ticket Description')  # Sort by description
+            pivot_by_ticket.to_excel(writer, sheet_name='Hours by Ticket')
+            
     else:  # default to csv
         filename = f"{base_filename}.csv"
         df.to_csv(filename, index=False)
