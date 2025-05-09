@@ -139,6 +139,12 @@ def test_save_time_logs_excel(mock_excel_writer, mock_to_csv):
     mock_writer = Mock()
     mock_excel_writer.return_value.__enter__.return_value = mock_writer
     
+    # Setup mock worksheet
+    mock_worksheet = Mock()
+    mock_worksheet.columns = [[Mock(value='Header1'), Mock(value='LongValue1')],
+                            [Mock(value='Header2'), Mock(value='LongValue2')]]
+    mock_writer.sheets = {'Sheet1': mock_worksheet}
+    
     save_time_logs(MOCK_TIME_LOGS, output_format='excel')
     
     # Verify ExcelWriter was created
@@ -152,6 +158,9 @@ def test_save_time_logs_excel(mock_excel_writer, mock_to_csv):
     assert 'Time Logs' in sheet_calls
     assert 'Hours by Person' in sheet_calls
     assert 'Hours by Ticket' in sheet_calls
+    
+    # Verify column width adjustment was attempted
+    assert mock_worksheet.column_dimensions.__setitem__.call_count > 0
     
     # Verify CSV was not called
     mock_to_csv.assert_not_called()

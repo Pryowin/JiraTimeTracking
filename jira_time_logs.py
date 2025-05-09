@@ -160,6 +160,28 @@ def save_time_logs(time_logs, target_date=None, output_format='csv'):
             pivot_by_ticket = pivot_by_ticket.sort_values('Ticket Description')  # Sort by description
             pivot_by_ticket.to_excel(writer, sheet_name='Hours by Ticket')
             
+            # Adjust column widths for all sheets
+            for sheet_name in writer.sheets:
+                worksheet = writer.sheets[sheet_name]
+                
+                # Get the maximum length of content in each column
+                for idx, col in enumerate(worksheet.columns):
+                    # Get the maximum length of content in the column
+                    max_length = 0
+                    column = [cell for cell in col]
+                    for cell in column:
+                        try:
+                            if len(str(cell.value)) > max_length:
+                                max_length = len(str(cell.value))
+                        except:
+                            pass
+                    
+                    # Add some padding to the max length
+                    adjusted_width = (max_length + 2)
+                    
+                    # Set the column width
+                    worksheet.column_dimensions[chr(65 + idx)].width = adjusted_width
+            
     else:  # default to csv
         filename = f"{base_filename}.csv"
         df.to_csv(filename, index=False)
